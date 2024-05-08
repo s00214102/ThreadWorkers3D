@@ -2,9 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
+using System;
+using UnityEngine.Events;
 
 public class WorkerWork : BaseState
 {
+    Thread workThread;
     WorkerController controller;
     Transform computer;
     public WorkerWork(WorkerController controller) : base(controller)
@@ -12,9 +15,12 @@ public class WorkerWork : BaseState
         this.controller = controller;
     }
     
+    int data = 0;
     public override void Enter()
     {
         Debug.Log("Entered work state");
+        
+        data=0;
 
         computer = GameObject.Find("computerPos").transform;
 
@@ -28,25 +34,17 @@ public class WorkerWork : BaseState
     }
 
     private void StartComputing(){
+        controller.CharacterMovement.DestinationReached.RemoveListener(StartComputing);
         // start a thread to beging the computation
         Debug.Log("Computing...");
         controller.SetState(1);
-        Thread workThread = new Thread(new ThreadStart(ComplexOutput));
+
+        workThread = new Thread(new ThreadStart(ComplexOutput));
+        workThread.Start();
     }
 
-    private int ComplexOutput(int inputNumber = 0)
+    private void ComplexOutput()
     {
-        // If no input number is given, generate a random three-digit number
-        if (inputNumber == 0)
-        {
-            Random random = new Random();
-            inputNumber = random.Next(100, 1000);
-        }
-        else if (inputNumber < 100 || inputNumber > 999)
-        {
-            throw new ArgumentException("Input number must be a three-digit number or zero.");
-        }
-
         // Simulate a delay using inefficient computations
         DateTime start = DateTime.Now;
 
@@ -81,18 +79,21 @@ public class WorkerWork : BaseState
         }
 
         // Make sure execution takes a few seconds
-        while ((DateTime.Now - start).TotalSeconds < 3)
-        {
-            // Simple busy-wait loop to simulate longer processing time
-        }
+        Thread.Sleep(1000);
 
         // Generate a final random number between 1 and 5
-        Random finalRandom = new Random();
-        return finalRandom.Next(1, 6);
+        System.Random finalRandom = new System.Random();
+        data= finalRandom.Next(1, 6);
+
+        ComputationComplete();
+    }
+    private void ComputationComplete(){
+        Debug.Log("Computation complete!");
+        controller.SetState(1);
     }
     public override void Exit()
     {
-        controller.CharacterMovement.DestinationReached.RemoveListener(StartComputing);
+        
         base.Exit();
     }
 
