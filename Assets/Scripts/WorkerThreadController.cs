@@ -105,6 +105,7 @@ public class WorkerThreadController : MonoBehaviour
 				finally
 				{
 					Monitor.Pulse(calculationLock);
+					//TODO play a pulse animation from the anthenna of the worker
 					Monitor.Exit(calculationLock);
 				}
 			}
