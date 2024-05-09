@@ -14,32 +14,34 @@ public class WorkerWork : BaseState
     {
         this.controller = controller;
     }
-    
+
     int data = 0;
     public override void Enter()
     {
         Debug.Log("Entered work state");
-        
-        data=0;
+
+        data = 0;
 
         computer = GameObject.Find("computerPos").transform;
 
         if (computer != null)
-            {
-                controller.CharacterMovement.MoveTo(computer.position, 1);
-                controller.CharacterMovement.DestinationReached.AddListener(StartComputing);
-            }
+        {
+            controller.CharacterMovement.MoveTo(computer.position, 1);
+            controller.CharacterMovement.DestinationReached.AddListener(StartComputing);
+        }
         else
             Debug.LogWarning("Worker couldnt find computer while in work state.");
     }
 
-    private void StartComputing(){
+    private void StartComputing()
+    {
         controller.CharacterMovement.DestinationReached.RemoveListener(StartComputing);
         // start a thread to beging the computation
         Debug.Log("Computing...");
-        controller.SetState(1);
+        //controller.SetState(1);
 
         workThread = new Thread(new ThreadStart(ComplexOutput));
+        workThread.IsBackground = true;
         workThread.Start();
     }
 
@@ -83,17 +85,18 @@ public class WorkerWork : BaseState
 
         // Generate a final random number between 1 and 5
         System.Random finalRandom = new System.Random();
-        data= finalRandom.Next(1, 6);
+        data = finalRandom.Next(1, 6);
 
         ComputationComplete();
     }
-    private void ComputationComplete(){
+    private void ComputationComplete()
+    {
         Debug.Log("Computation complete!");
         controller.SetState(1);
     }
     public override void Exit()
     {
-        
+
         base.Exit();
     }
 

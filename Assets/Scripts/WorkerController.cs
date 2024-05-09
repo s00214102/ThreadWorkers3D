@@ -7,6 +7,10 @@ using UnityEngine.UI;
 [RequireComponent(typeof(CharacterMovement))]
 public class WorkerController : BaseStateMachine
 {
+	public bool test = false;
+	[ContextMenu("Set Bool")]
+	public void SetBool() => test = true;
+
 	public CharacterMovement CharacterMovement;
 	public enum WorkerState
 	{

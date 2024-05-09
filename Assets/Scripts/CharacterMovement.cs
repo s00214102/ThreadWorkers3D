@@ -60,7 +60,7 @@ public class CharacterMovement : MonoBehaviour
             {
                 Debug.Log("Destination reached");
                 OnDestinationReached();
-                //StopMoving();
+                StopMoving();
             }
         }
     }
