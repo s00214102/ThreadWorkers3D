@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
@@ -21,6 +22,8 @@ public class WorkerThreadController : MonoBehaviour
 
 	// used to let the thread know when we have reached a target destination
 	private ManualResetEvent reachedTargetEvent = new ManualResetEvent(false);
+
+	private static readonly object calculationLock = new object();
 
 	private CharacterMovement characterMovement;
 	// this method is run before Start() and is used for setup
@@ -76,6 +79,10 @@ public class WorkerThreadController : MonoBehaviour
 			reachedTargetEvent.WaitOne(); // Wait until destination is reached
 			reachedTargetEvent.Reset(); // Reset for the next event
 
+			// perform calculation at the computer
+			lock (calculationLock)
+			{ ComplexOutput(); }
+
 			// enqueue the action to move to the storage
 			taskQueue.Enqueue(() => MoveWorker(storage.position));
 			reachedTargetEvent.WaitOne(); // Wait until destination is reached
@@ -105,6 +112,50 @@ public class WorkerThreadController : MonoBehaviour
 	private void RetireWorker()
 	{
 		Destroy(this.gameObject);
+	}
+
+	int data = 0;
+	private void ComplexOutput()
+	{
+		// Simulate a delay using inefficient computations
+		DateTime start = DateTime.Now;
+
+		// Inefficient prime number computation
+		List<int> primes = new List<int>();
+		for (int num = 2; num < 10000; num++)
+		{
+			bool prime = true;
+			for (int i = 2; i <= Math.Sqrt(num); i++)
+			{
+				if (num % i == 0)
+				{
+					prime = false;
+					break;
+				}
+			}
+			if (prime) primes.Add(num);
+		}
+
+		// Fibonacci computation (up to a large arbitrary index)
+		List<long> fib = new List<long> { 0, 1 };
+		for (int i = 2; i < 10000; i++)
+		{
+			fib.Add(fib[i - 1] + fib[i - 2]);
+		}
+
+		// Waste time with repetitive and non-optimal calculations
+		long result = 0;
+		for (long i = 0; i < 1000000; i++)
+		{
+			result += (i * i) % 10;
+		}
+
+		// Make sure execution takes a few seconds
+		Thread.Sleep(1000);
+
+		// Generate a final random number between 1 and 5
+		System.Random finalRandom = new System.Random();
+		data = finalRandom.Next(1, 6);
 	}
 
 	void OnDestroy()
