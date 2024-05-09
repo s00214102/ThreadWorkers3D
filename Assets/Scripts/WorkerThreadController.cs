@@ -2,7 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class WorkerThreadController : MonoBehaviour
 {
@@ -11,7 +13,7 @@ public class WorkerThreadController : MonoBehaviour
 	bool workDone;
 	float moveSpeed = 5f;
 	float rotationSpeed = 5f;
-
+	[SerializeField] private TMP_Text dataText;
 	Transform computer; // the computers world position
 	Transform storage; // the storage world position
 	Transform retirement; // the storage world position
@@ -29,6 +31,7 @@ public class WorkerThreadController : MonoBehaviour
 	// this method is run before Start() and is used for setup
 	private void Awake()
 	{
+		dataText.text = "";
 		// a component used to tell the robot where to move
 		characterMovement = GetComponent<CharacterMovement>();
 
@@ -118,6 +121,7 @@ public class WorkerThreadController : MonoBehaviour
 			taskQueue.Enqueue(() => MoveWorker(storage.position, 1));
 			reachedTargetEvent.WaitOne(); // Wait until destination is reached
 			reachedTargetEvent.Reset(); // Reset for the next event
+			taskQueue.Enqueue(() => dataText.text = ""); // clear the workers text which displays the number
 		}
 		workDone = true;
 		Debug.Log("Worker retiring.");
@@ -187,6 +191,7 @@ public class WorkerThreadController : MonoBehaviour
 		// Generate a final random number between 1 and 5
 		System.Random finalRandom = new System.Random();
 		data = finalRandom.Next(1, 6);
+		taskQueue.Enqueue(() => dataText.text =data.ToString());
 	}
 
 	void OnDestroy()
