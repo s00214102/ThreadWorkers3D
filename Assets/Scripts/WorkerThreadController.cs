@@ -75,22 +75,52 @@ public class WorkerThreadController : MonoBehaviour
 				return;
 
 			// enqueue the action to move to the computer
-			taskQueue.Enqueue(() => MoveWorker(computer.position));
+			taskQueue.Enqueue(() => MoveWorker(computer.position, 2));
 			reachedTargetEvent.WaitOne(); // Wait until destination is reached
 			reachedTargetEvent.Reset(); // Reset for the next event
 
 			// perform calculation at the computer
-			lock (calculationLock)
-			{ ComplexOutput(); }
+			// lock (calculationLock)
+			// {
+			// 	taskQueue.Enqueue(() => MoveWorker(computer.position, 0));
+			// 	reachedTargetEvent.WaitOne(); // Wait until destination is reached
+			// 	reachedTargetEvent.Reset(); // Reset for the next event	
+			// 	ComplexOutput();
+			// }
+
+			// try to access the computer for 1 minute
+			if (Monitor.TryEnter(calculationLock, 60000))
+			{
+				try
+				{
+					taskQueue.Enqueue(() => MoveWorker(computer.position, 0));
+					reachedTargetEvent.WaitOne(); // Wait until destination is reached
+					reachedTargetEvent.Reset(); // Reset for the next event	
+					ComplexOutput();
+				}
+				catch (Exception e)
+				{
+					Debug.LogWarning(e);
+				}
+				finally
+				{
+					Monitor.Pulse(calculationLock);
+					Monitor.Exit(calculationLock);
+				}
+			}
+			else
+			{
+				Debug.Log($"{workerThread.Name} can't access computer right now.");
+			}
 
 			// enqueue the action to move to the storage
-			taskQueue.Enqueue(() => MoveWorker(storage.position));
+			taskQueue.Enqueue(() => MoveWorker(storage.position, 1));
 			reachedTargetEvent.WaitOne(); // Wait until destination is reached
 			reachedTargetEvent.Reset(); // Reset for the next event
 		}
 		workDone = true;
 		Debug.Log("Worker retiring.");
-		taskQueue.Enqueue(() => MoveWorker(retirement.position));
+		taskQueue.Enqueue(() => MoveWorker(retirement.position, 0));
 		reachedTargetEvent.WaitOne(); // Wait until destination is reached
 		reachedTargetEvent.Reset(); // Reset for the next event
 
@@ -100,10 +130,10 @@ public class WorkerThreadController : MonoBehaviour
 	}
 
 	// Move the worker GameObject to the specified target position
-	private void MoveWorker(Vector3 targetPosition)
+	private void MoveWorker(Vector3 targetPosition, float stopRange)
 	{
 		// uses the Unity NavMesh system to move the worker to the target position
-		characterMovement.MoveTo(targetPosition);
+		characterMovement.MoveTo(targetPosition, stopRange);
 		characterMovement.DestinationReached.RemoveAllListeners();
 		// an event will signal that the worker has reached their destination, this is used to continue the code within the thread
 		characterMovement.DestinationReached.AddListener(() => reachedTargetEvent.Set());
