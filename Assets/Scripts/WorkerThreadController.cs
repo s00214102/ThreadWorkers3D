@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,7 +12,9 @@ public class WorkerThreadController : MonoBehaviour
 	Thread workerThread;
 
 	[SerializeField] private TMP_Text dataText;
+	public TMP_Text stateText;
 	public Button startButton;
+	public Button cancelButton;
 	public GameObject workerCard;
 
 	Transform computer; // the computers world position
@@ -50,11 +53,17 @@ public class WorkerThreadController : MonoBehaviour
 	{
 		CreateWorkerThread();
 
+		stateText.text = GetReadableThreadState(workerThread.ThreadState);
 		startButton.onClick.AddListener(StartWorker);
+		cancelButton.onClick.AddListener(CancelWorker);
+		workerCard.GetComponent<WorkerCard>().OnPriorityValueChanged += UpdatePriority;
 	}
+
 	// this method runs multiple times a frame according to unitys internal clock
 	private void Update()
 	{
+		stateText.text = GetReadableThreadState(workerThread.ThreadState);
+
 		// Execute all tasks queued by the worker threads on the main thread
 		while (taskQueue.TryDequeue(out Action action))
 		{
@@ -88,52 +97,72 @@ public class WorkerThreadController : MonoBehaviour
 			return;
 		}
 
-		// move back and forth from computer to storage 5 times
-		for (int i = 0; i < 1; i++)
+		try
 		{
-			if (workerDestroyed)
+			// move back and forth from computer to storage 5 times
+			for (int i = 0; i < 4; i++)
 			{
-				Debug.Log("Worker destroyed, exiting thread.");
-				return;
-			}
-
-			// enqueue the action to move to the computer
-			taskQueue.Enqueue(() => MoveWorker(computer.position, 2));
-			reachedTargetEvent.WaitOne(); // Wait until destination is reached
-			reachedTargetEvent.Reset(); // Reset for the next event
-
-			// try to access the computer for 1 minute
-			if (Monitor.TryEnter(calculationLock, 60000))
-			{
-				try
+				if (workerDestroyed)
 				{
-					taskQueue.Enqueue(() => MoveWorker(computer.position, 0));
-					reachedTargetEvent.WaitOne(); // Wait until destination is reached
-					reachedTargetEvent.Reset(); // Reset for the next event	
-					ComplexOutput(taskQueue);
+					Debug.Log("Worker destroyed, exiting thread.");
+					return;
 				}
-				catch (Exception e)
-				{
-					Debug.LogWarning(e);
-				}
-				finally
-				{
-					Monitor.Pulse(calculationLock);
-					//TODO play a pulse animation from the anthenna of the worker
-					Monitor.Exit(calculationLock);
-				}
-			}
-			else
-			{
-				Debug.Log($"{workerThread.Name} can't access computer right now.");
-			}
 
-			// enqueue the action to move to the storage
-			taskQueue.Enqueue(() => MoveWorker(storage.position, 1));
-			reachedTargetEvent.WaitOne(); // Wait until destination is reached
-			reachedTargetEvent.Reset(); // Reset for the next event
-			taskQueue.Enqueue(() => dataText.text = ""); // clear the workers text which displays the number
+				// enqueue the action to move to the computer
+				taskQueue.Enqueue(() => MoveWorker(computer.position, 2));
+				reachedTargetEvent.WaitOne(); // Wait until destination is reached
+				reachedTargetEvent.Reset(); // Reset for the next event
+
+				// try to access the computer for 1 minute
+				if (Monitor.TryEnter(calculationLock, 60000))
+				{
+					try
+					{
+						taskQueue.Enqueue(() => MoveWorker(computer.position, 0));
+						reachedTargetEvent.WaitOne(); // Wait until destination is reached
+						reachedTargetEvent.Reset(); // Reset for the next event	
+						ComplexOutput(taskQueue);
+					}
+					catch (Exception e)
+					{
+						Debug.LogWarning(e);
+					}
+					finally
+					{
+						Monitor.Pulse(calculationLock);
+						//TODO play a pulse animation from the anthenna of the worker
+						Monitor.Exit(calculationLock);
+					}
+				}
+				else
+				{
+					Debug.Log($"{workerThread.Name} can't access computer right now.");
+				}
+
+				// enqueue the action to move to the storage
+				taskQueue.Enqueue(() => MoveWorker(storage.position, 1));
+				reachedTargetEvent.WaitOne(); // Wait until destination is reached
+				reachedTargetEvent.Reset(); // Reset for the next event
+				taskQueue.Enqueue(() => dataText.text = ""); // clear the workers text which displays the number
+			}
+			RetireWorker();
 		}
+		catch (ThreadInterruptedException)
+		{
+
+		}
+		catch (ThreadAbortException)
+		{
+			RetireWorker();
+		}
+		finally
+		{
+			//do cleanup here 
+		}
+	}
+
+	private void RetireWorker()
+	{
 		Debug.Log("Worker retiring.");
 		taskQueue.Enqueue(() => MoveWorker(retirement.position, 0));
 		reachedTargetEvent.WaitOne(); // Wait until destination is reached
@@ -141,9 +170,8 @@ public class WorkerThreadController : MonoBehaviour
 
 		Debug.Log("Worker has retired!");
 		//TODO worker retirement animation (blowsup? flies up into the air? enters a darkened doorway?)
-		taskQueue.Enqueue(() => RetireWorker());
+		taskQueue.Enqueue(() => DestroyWorker());
 	}
-
 	// Move the worker GameObject to the specified target position
 	private void MoveWorker(Vector3 targetPosition, float stopRange)
 	{
@@ -154,7 +182,34 @@ public class WorkerThreadController : MonoBehaviour
 		characterMovement.DestinationReached.AddListener(() => reachedTargetEvent.Set());
 	}
 
-	private void RetireWorker()
+	public void UpdatePriority(int value)
+	{
+		switch (value)
+		{
+			case 0:
+				workerThread.Priority = System.Threading.ThreadPriority.Lowest;
+				break;
+			case 1:
+				workerThread.Priority = System.Threading.ThreadPriority.BelowNormal;
+				break;
+			case 2:
+				workerThread.Priority = System.Threading.ThreadPriority.Normal;
+				break;
+			case 3:
+				workerThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+				break;
+			case 4:
+				workerThread.Priority = System.Threading.ThreadPriority.Highest;
+				break;
+		}
+	}
+
+	private void CancelWorker()
+	{
+		workerThread.Abort();
+	}
+
+	private void DestroyWorker()
 	{
 		Destroy(this.gameObject);
 	}
@@ -202,6 +257,31 @@ public class WorkerThreadController : MonoBehaviour
 		System.Random finalRandom = new System.Random();
 		data = finalRandom.Next(1, 6);
 		taskQueue.Enqueue(() => dataText.text = data.ToString());
+	}
+
+	// Decode the ThreadState into a more human-readable message
+	private string GetReadableThreadState(ThreadState state)
+	{
+		if (state.HasFlag(ThreadState.Unstarted))
+			return "Unstarted";
+		if (state.HasFlag(ThreadState.Running))
+			return "Running";
+		if (state.HasFlag(ThreadState.WaitSleepJoin))
+			return "Blocked (Wait/Sleep/Join)";
+		if (state.HasFlag(ThreadState.Stopped))
+			return "Stopped";
+		if (state.HasFlag(ThreadState.SuspendRequested))
+			return "Suspend Requested";
+		if (state.HasFlag(ThreadState.Suspended))
+			return "Suspended";
+		if (state.HasFlag(ThreadState.AbortRequested))
+			return "Abort Requested";
+		if (state.HasFlag(ThreadState.Aborted))
+			return "Aborted";
+		// if (state.HasFlag(ThreadState.Background))
+		//     return "Running (Background)";
+
+		return "Unknown";
 	}
 
 	void OnDestroy()

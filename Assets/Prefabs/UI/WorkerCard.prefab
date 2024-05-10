@@ -538,6 +538,7 @@ GameObject:
   - component: {fileID: 3341109267870486795}
   - component: {fileID: 9115784375689030138}
   - component: {fileID: 1575110592818439279}
+  - component: {fileID: 2708128324133177362}
   m_Layer: 5
   m_Name: WorkerCard
   m_TagString: Untagged
@@ -608,6 +609,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &2708128324133177362
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4562782769032224060}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61ac34f189acbb245bddf1e188d6cb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &4631019497308155090
 GameObject:
   m_ObjectHideFlags: 0

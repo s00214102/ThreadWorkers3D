@@ -18,7 +18,7 @@ public class WorkerManager : MonoBehaviour
     private Transform spawnPos;
     private int totalWorkersCreated = 0;
     private readonly List<GameObject> activeWorkers = new List<GameObject>();
-    private readonly ConcurrentQueue<Action> taskQueue = new ConcurrentQueue<Action>();
+    //private readonly ConcurrentQueue<Action> taskQueue = new ConcurrentQueue<Action>();
 
     private void Awake()
     {
@@ -27,18 +27,15 @@ public class WorkerManager : MonoBehaviour
     void Start()
     {
         spawnButton.onClick.AddListener(SpawnWorker);
-
-        // add any workers already in the scene
-
     }
 
     void Update()
     {
         // Execute tasks queued by worker threads
-        while (taskQueue.TryDequeue(out Action action))
-        {
-            action.Invoke();
-        }
+        // while (taskQueue.TryDequeue(out Action action))
+        // {
+        //     action.Invoke();
+        // }
     }
 
     // Spawn a new worker and run its logic in a task
@@ -55,13 +52,23 @@ public class WorkerManager : MonoBehaviour
         GameObject workerStartButtonGO = newWorkerCard.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "btnStart")?.gameObject;
         Button workerStartButton = workerStartButtonGO.GetComponent<Button>();
         newWorker.GetComponent<WorkerThreadController>().startButton = workerStartButton;
+
+        // cancel button
+        GameObject workerCancelButtonGO = newWorkerCard.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "btnCancel")?.gameObject;
+        Button workerCancelButton = workerCancelButtonGO.GetComponent<Button>();
+        newWorker.GetComponent<WorkerThreadController>().cancelButton = workerCancelButton;
+
         // cache reference to worker card on worker controlelr
         newWorker.GetComponent<WorkerThreadController>().workerCard = newWorkerCard;
         // name the worker
         GameObject workerCardName = newWorkerCard.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "txtName")?.gameObject;
         workerCardName.GetComponent<TextMeshProUGUI>().text = $"Worker {totalWorkersCreated:D3}";
-
         totalWorkersCreated++;
+        // txtState
+        GameObject workerStateTextGO = newWorkerCard.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "txtState")?.gameObject;
+        newWorker.GetComponent<WorkerThreadController>().stateText = workerStateTextGO.GetComponent<TextMeshProUGUI>();
+        // listen to WorkerCard.OnPriorityValueChanged
+        //newWorkerCard.GetComponent<WorkerCard>().OnPriorityValueChanged += newWorker.GetComponent<WorkerThreadController>().UpdatePriority;
 
         // Queue the worker logic on the ThreadPool
         // if (ThreadPool.QueueUserWorkItem(state => newWorker.GetComponent<WorkerThreadController>().RunWorker(taskQueue)))
