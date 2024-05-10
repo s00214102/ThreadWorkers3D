@@ -20,20 +20,12 @@ public class WorkerController : BaseStateMachine
 	public WorkerState CurrentState;
 	Dictionary<WorkerState, BaseState> States = new Dictionary<WorkerState, BaseState>();
 
-	private WorkerManager _manager;
-	private bool _managed = false;
+
 
 	private void Awake()
 	{
 		CharacterMovement = GetComponent<CharacterMovement>();
-		_manager = GetComponentInParent<WorkerManager>();
-		if (_manager != null)
-		{
-			_managed = true;
-			_manager.AddHero(this.gameObject);
-		}
-		else
-			_managed = false;
+
 	}
 	void Start()
 	{
@@ -43,19 +35,17 @@ public class WorkerController : BaseStateMachine
 	}
 	public void ManagerUpdate()
 	{
-		if (_managed)
-		{
-			if (CurrentImplimentation != null)
-				CurrentImplimentation.Update();
-		}
+
+		if (CurrentImplimentation != null)
+			CurrentImplimentation.Update();
+
 	}
 	private void Update()
 	{
-		if (!_managed)
-		{
-			if (CurrentImplimentation != null)
-				CurrentImplimentation.Update();
-		}
+
+		if (CurrentImplimentation != null)
+			CurrentImplimentation.Update();
+
 	}
 	private void InitiliazeStates()
 	{

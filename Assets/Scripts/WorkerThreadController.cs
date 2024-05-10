@@ -4,16 +4,16 @@ using System.Collections.Generic;
 using System.Threading;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEngine.UI;
 
 public class WorkerThreadController : MonoBehaviour
 {
 	Thread workerThread;
 
-	bool workDone;
-	float moveSpeed = 5f;
-	float rotationSpeed = 5f;
 	[SerializeField] private TMP_Text dataText;
+	public Button startButton;
+	public GameObject workerCard;
+
 	Transform computer; // the computers world position
 	Transform storage; // the storage world position
 	Transform retirement; // the storage world position
@@ -48,11 +48,9 @@ public class WorkerThreadController : MonoBehaviour
 	// this method is used to start a components logic
 	private void Start()
 	{
-		workerThread = new Thread(() => DoWorkOnThread())
-		{
-			IsBackground = true // all threads I use in Unity for gameplay logic must be background threads, otherwise they will just keep running when the game stops.
-		};
-		workerThread.Start();
+		CreateWorkerThread();
+
+		startButton.onClick.AddListener(StartWorker);
 	}
 	// this method runs multiple times a frame according to unitys internal clock
 	private void Update()
@@ -63,33 +61,46 @@ public class WorkerThreadController : MonoBehaviour
 			action.Invoke();
 		}
 	}
+
+	public void CreateWorkerThread()
+	{
+		if (workerThread == null || !workerThread.IsAlive)
+		{
+			workerThread = new Thread(() => RunWorker());
+			workerThread.IsBackground = true; // Mark as background thread
+		}
+	}
+
+	// called via UI button press
+	public void StartWorker()
+	{
+		workerThread.Start();
+	}
+
 	// the thread method which runs the workers logic
-	private void DoWorkOnThread()
+	private void RunWorker()
 	{
 		Debug.Log("Work starting.");
 
 		if (workerDestroyed)
+		{
+			Debug.Log("Worker destroyed, exiting thread.");
 			return;
+		}
 
 		// move back and forth from computer to storage 5 times
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			if (workerDestroyed)
+			{
+				Debug.Log("Worker destroyed, exiting thread.");
 				return;
+			}
 
 			// enqueue the action to move to the computer
 			taskQueue.Enqueue(() => MoveWorker(computer.position, 2));
 			reachedTargetEvent.WaitOne(); // Wait until destination is reached
 			reachedTargetEvent.Reset(); // Reset for the next event
-
-			// perform calculation at the computer
-			// lock (calculationLock)
-			// {
-			// 	taskQueue.Enqueue(() => MoveWorker(computer.position, 0));
-			// 	reachedTargetEvent.WaitOne(); // Wait until destination is reached
-			// 	reachedTargetEvent.Reset(); // Reset for the next event	
-			// 	ComplexOutput();
-			// }
 
 			// try to access the computer for 1 minute
 			if (Monitor.TryEnter(calculationLock, 60000))
@@ -99,7 +110,7 @@ public class WorkerThreadController : MonoBehaviour
 					taskQueue.Enqueue(() => MoveWorker(computer.position, 0));
 					reachedTargetEvent.WaitOne(); // Wait until destination is reached
 					reachedTargetEvent.Reset(); // Reset for the next event	
-					ComplexOutput();
+					ComplexOutput(taskQueue);
 				}
 				catch (Exception e)
 				{
@@ -123,7 +134,6 @@ public class WorkerThreadController : MonoBehaviour
 			reachedTargetEvent.Reset(); // Reset for the next event
 			taskQueue.Enqueue(() => dataText.text = ""); // clear the workers text which displays the number
 		}
-		workDone = true;
 		Debug.Log("Worker retiring.");
 		taskQueue.Enqueue(() => MoveWorker(retirement.position, 0));
 		reachedTargetEvent.WaitOne(); // Wait until destination is reached
@@ -150,7 +160,7 @@ public class WorkerThreadController : MonoBehaviour
 	}
 
 	int data = 0;
-	private void ComplexOutput()
+	private void ComplexOutput(ConcurrentQueue<Action> taskQueue)
 	{
 		// Simulate a delay using inefficient computations
 		DateTime start = DateTime.Now;
@@ -198,6 +208,7 @@ public class WorkerThreadController : MonoBehaviour
 	{
 		// Stop the worker thread when this MonoBehaviour is destroyed
 		workerDestroyed = true;
+		Destroy(workerCard);
 	}
 
 }
