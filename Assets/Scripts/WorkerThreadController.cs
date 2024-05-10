@@ -191,7 +191,7 @@ public class WorkerThreadController : MonoBehaviour
 		// Generate a final random number between 1 and 5
 		System.Random finalRandom = new System.Random();
 		data = finalRandom.Next(1, 6);
-		taskQueue.Enqueue(() => dataText.text =data.ToString());
+		taskQueue.Enqueue(() => dataText.text = data.ToString());
 	}
 
 	void OnDestroy()
