@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -23,13 +24,16 @@ public class WorkerThreadController : MonoBehaviour
 	Transform retirement; // the storage world position
 
 	bool workerDestroyed = false;
+	private float rotationSpeed = 5;
 
 	private ConcurrentQueue<Action> taskQueue = new ConcurrentQueue<Action>();
 
 	// used to let the thread know when we have reached a target destination
 	private ManualResetEvent reachedTargetEvent = new ManualResetEvent(false);
+	private ManualResetEvent facingTargetEvent = new ManualResetEvent(false);
 
 	private static readonly object calculationLock = new object();
+	private static readonly object storageLock = new object();
 
 	private CharacterMovement characterMovement;
 
@@ -143,22 +147,38 @@ public class WorkerThreadController : MonoBehaviour
 					Debug.Log($"{workerThread.Name} can't access computer right now.");
 				}
 
-				// enqueue the action to move to the storage
-				taskQueue.Enqueue(() => MoveWorker(storage.position, 1));
+				// enqueue the action to move to the storage area
+				taskQueue.Enqueue(() => MoveWorker(storage.position, 2));
 				reachedTargetEvent.WaitOne(); // Wait until destination is reached
 				reachedTargetEvent.Reset(); // Reset for the next event
-											// worker reached the storage
-				taskQueue.Enqueue(() => dataText.text = ""); // clear the workers text which displays the number
-				Debug.Log("Data: " + data);
 
-				taskQueue.Enqueue(() => Storage.Instance.AddNumberToStorageAndDisplay(data.ToString()));
-
-				// taskQueue.Enqueue(() =>
-				// {
-				// 	JsonFieldUpdate updateInfo = new JsonFieldUpdate("data", data);
-				// 	WorkerManager.isolatedStorage.UpdateJsonField(updateInfo);  // add number to isolated storage
-				// });
-
+				// worker reached the storage, try to access the storage for 1 minute
+				if (Monitor.TryEnter(storageLock, 60000))
+				{
+					try
+					{
+						taskQueue.Enqueue(() => MoveWorker(storage.position, 0));
+						reachedTargetEvent.WaitOne(); // Wait until destination is reached
+						reachedTargetEvent.Reset(); // Reset for the next event	
+						taskQueue.Enqueue(() => dataText.text = ""); // clear the workers text which displays the number
+						taskQueue.Enqueue(() => Storage.Instance.AddNumberToStorageAndDisplay(data.ToString()));
+						Debug.Log("Data: " + data);
+					}
+					catch (Exception e)
+					{
+						Debug.LogWarning(e);
+					}
+					finally
+					{
+						Monitor.Pulse(storageLock);
+						//TODO play a pulse animation from the anthenna of the worker
+						Monitor.Exit(storageLock);
+					}
+				}
+				else
+				{
+					Debug.Log($"{workerThread.Name} can't access storage right now.");
+				}
 			}
 			RetireWorker();
 		}
@@ -187,6 +207,7 @@ public class WorkerThreadController : MonoBehaviour
 		//TODO worker retirement animation (blowsup? flies up into the air? enters a darkened doorway?)
 		taskQueue.Enqueue(() => DestroyWorker());
 	}
+
 	// Move the worker GameObject to the specified target position
 	private void MoveWorker(Vector3 targetPosition, float stopRange)
 	{
@@ -195,6 +216,23 @@ public class WorkerThreadController : MonoBehaviour
 		characterMovement.DestinationReached.RemoveAllListeners();
 		// an event will signal that the worker has reached their destination, this is used to continue the code within the thread
 		characterMovement.DestinationReached.AddListener(() => reachedTargetEvent.Set());
+	}
+
+	// Rotate the worker to face a target and call ManualResetEvent facingTargetEvent.Set() 
+	private IEnumerator RotateTowardsTarget(Vector3 targetPosition)
+	{
+		Vector3 directionToTarget = targetPosition - transform.position;
+		Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+
+		while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f)
+		{
+			// Rotate over time with specified speed
+			transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+			yield return null;  // Wait until next frame to continue execution
+		}
+
+		transform.rotation = targetRotation;  // Ensure the rotation exactly faces the target
+		facingTargetEvent.Set();  // Signal that the target is now facing directly
 	}
 
 	public void UpdatePriority(int value)
@@ -303,10 +341,7 @@ public class WorkerThreadController : MonoBehaviour
 	{
 		// Stop the worker thread when this MonoBehaviour is destroyed
 		workerDestroyed = true;
-
-		if (workerThread != null && workerThread.IsAlive)
-			workerThread.Join();
-
+		CancelWorker();
 		Destroy(workerCard);
 	}
 
