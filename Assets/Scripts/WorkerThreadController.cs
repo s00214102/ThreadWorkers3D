@@ -151,6 +151,8 @@ public class WorkerThreadController : MonoBehaviour
 				taskQueue.Enqueue(() => dataText.text = ""); // clear the workers text which displays the number
 				Debug.Log("Data: " + data);
 
+				taskQueue.Enqueue(() => Storage.Instance.AddNumberToStorageAndDisplay(data.ToString()));
+
 				// taskQueue.Enqueue(() =>
 				// {
 				// 	JsonFieldUpdate updateInfo = new JsonFieldUpdate("data", data);
@@ -268,7 +270,7 @@ public class WorkerThreadController : MonoBehaviour
 
 		// Generate a final random number between 1 and 5
 		System.Random finalRandom = new System.Random();
-		data = finalRandom.Next(1, 6);
+		data = finalRandom.Next(0, 9);
 		taskQueue.Enqueue(() => dataText.text = data.ToString());
 	}
 
@@ -301,6 +303,10 @@ public class WorkerThreadController : MonoBehaviour
 	{
 		// Stop the worker thread when this MonoBehaviour is destroyed
 		workerDestroyed = true;
+
+		if (workerThread != null && workerThread.IsAlive)
+			workerThread.Join();
+
 		Destroy(workerCard);
 	}
 
