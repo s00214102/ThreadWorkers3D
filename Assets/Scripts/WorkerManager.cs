@@ -4,9 +4,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using SharedWorkerStorage;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Newtonsoft.Json;
 
 public class WorkerManager : MonoBehaviour
 {
@@ -14,19 +16,26 @@ public class WorkerManager : MonoBehaviour
     [SerializeField] private GameObject workerPrefab;
     [SerializeField] private GameObject workerCardPrefab;
     [SerializeField] private GameObject workerCardUIContent;
-    [SerializeField] private Text statusText;
+    [SerializeField] private TextMeshProUGUI statusText;
+    //[SerializeField] private TextMeshProUGUI targetNumber;
+
     private Transform spawnPos;
     private int totalWorkersCreated = 0;
     private readonly List<GameObject> activeWorkers = new List<GameObject>();
     //private readonly ConcurrentQueue<Action> taskQueue = new ConcurrentQueue<Action>();
+    //public static JsonStorageManager isolatedStorage;
 
     private void Awake()
     {
         spawnPos = GameObject.Find("spawnPos").transform;
+
+        //isolatedStorage = new JsonStorageManager();
     }
     void Start()
     {
         spawnButton.onClick.AddListener(SpawnWorker);
+
+        //targetNumber.text = isolatedStorage.ReadJsonField("target");
     }
 
     void Update()

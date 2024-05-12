@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using SharedWorkerStorage;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -31,6 +32,9 @@ public class WorkerThreadController : MonoBehaviour
 	private static readonly object calculationLock = new object();
 
 	private CharacterMovement characterMovement;
+
+	//private static JsonStorageManager isolatedStorage;
+
 	// this method is run before Start() and is used for setup
 	private void Awake()
 	{
@@ -143,7 +147,16 @@ public class WorkerThreadController : MonoBehaviour
 				taskQueue.Enqueue(() => MoveWorker(storage.position, 1));
 				reachedTargetEvent.WaitOne(); // Wait until destination is reached
 				reachedTargetEvent.Reset(); // Reset for the next event
+											// worker reached the storage
 				taskQueue.Enqueue(() => dataText.text = ""); // clear the workers text which displays the number
+				Debug.Log("Data: " + data);
+
+				// taskQueue.Enqueue(() =>
+				// {
+				// 	JsonFieldUpdate updateInfo = new JsonFieldUpdate("data", data);
+				// 	WorkerManager.isolatedStorage.UpdateJsonField(updateInfo);  // add number to isolated storage
+				// });
+
 			}
 			RetireWorker();
 		}
