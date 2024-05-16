@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 public class WorkerManager : MonoBehaviour
 {
     [SerializeField] private Button spawnButton;
+    [SerializeField] private Button startAllButton;
     [SerializeField] private GameObject workerPrefab;
     [SerializeField] private GameObject workerCardPrefab;
     [SerializeField] private GameObject workerCardUIContent;
@@ -34,7 +35,7 @@ public class WorkerManager : MonoBehaviour
     void Start()
     {
         spawnButton.onClick.AddListener(SpawnWorker);
-
+        startAllButton.onClick.AddListener(StartAllWorkers);
         //targetNumber.text = isolatedStorage.ReadJsonField("target");
     }
 
@@ -88,6 +89,14 @@ public class WorkerManager : MonoBehaviour
         //UpdateStatusText();
     }
 
+    // when the Start All button on UI is clicked, call each workers StartWorker method
+    private void StartAllWorkers()
+    {
+        foreach (var worker in activeWorkers)
+        {
+            worker.GetComponent<WorkerThreadController>().StartWorker();
+        }
+    }
     // Update the status text with the current number of active workers
     private void UpdateStatusText()
     {

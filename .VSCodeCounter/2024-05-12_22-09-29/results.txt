@@ -1,0 +1,38 @@
+Date : 2024-05-12 22:09:29
+Directory : z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts
+Total : 14 files,  832 codes, 118 comments, 138 blanks, all 1088 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| C#       |         14 |        832 |        118 |        138 |      1,088 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                        | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                           |         14 |        832 |        118 |        138 |      1,088 |
++-----------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                    | language | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\BalkingPattern.cs         | C#       |         21 |          0 |          4 |         25 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\BaseState.cs              | C#       |          9 |          0 |          3 |         12 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\BaseStateMachine.cs       | C#       |         13 |          0 |          3 |         16 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\BasicFSMSetup.cs          | C#       |         39 |         26 |          8 |         73 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\CharacterMovement.cs      | C#       |         74 |          4 |          6 |         84 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\Storage.cs                | C#       |         34 |          5 |          6 |         45 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\UnityIsolatedStorage.cs   | C#       |         75 |          3 |          7 |         85 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\WorkerCard.cs             | C#       |         49 |          7 |          5 |         61 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\WorkerController.cs       | C#       |         56 |          1 |         15 |         72 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\WorkerManager.cs          | C#       |         65 |         28 |         13 |        106 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\WorkerStore.cs            | C#       |         36 |          1 |          6 |         43 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\WorkerThreadController.cs | C#       |        271 |         35 |         43 |        349 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\WorkerUIController.cs     | C#       |          7 |          0 |          2 |          9 |
+| z:\CollegeProjects\ThreadWorkers3D\Assets\Scripts\WorkerWork.cs             | C#       |         83 |          8 |         17 |        108 |
+| Total                                                                       |          |        832 |        118 |        138 |      1,088 |
++-----------------------------------------------------------------------------+----------+------------+------------+------------+------------+

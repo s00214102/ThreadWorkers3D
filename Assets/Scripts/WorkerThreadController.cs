@@ -91,7 +91,9 @@ public class WorkerThreadController : MonoBehaviour
 	// called via UI button press
 	public void StartWorker()
 	{
-		workerThread.Start();
+
+		if (workerThread.ThreadState.HasFlag(ThreadState.Unstarted))
+			workerThread.Start();
 	}
 
 	// the thread method which runs the workers logic
