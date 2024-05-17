@@ -14,6 +14,7 @@ public class WorkerManager : MonoBehaviour
 {
     [SerializeField] private Button spawnButton;
     [SerializeField] private Button startAllButton;
+    [SerializeField] private Button cancelAllButton;
     [SerializeField] private GameObject workerPrefab;
     [SerializeField] private GameObject workerCardPrefab;
     [SerializeField] private GameObject workerCardUIContent;
@@ -36,7 +37,11 @@ public class WorkerManager : MonoBehaviour
     {
         spawnButton.onClick.AddListener(SpawnWorker);
         startAllButton.onClick.AddListener(StartAllWorkers);
+        cancelAllButton.onClick.AddListener(CancelAllWorkers);
         //targetNumber.text = isolatedStorage.ReadJsonField("target");
+
+        // listen to storage even for when the required numbers are reached
+        GameObject.Find("storageBox").GetComponent<Storage>().OnNumberReached.AddListener(CancelAllWorkers);
     }
 
     void Update()
@@ -49,15 +54,24 @@ public class WorkerManager : MonoBehaviour
     }
 
     // Spawn a new worker and run its logic in a task
-    private void SpawnWorker()
+    public void SpawnWorker()
     {
         // create/spawn new worker prefab, position at spawn point, add to list
         GameObject newWorker = Instantiate(workerPrefab, this.transform);
         newWorker.transform.position = spawnPos.position;
+
+        // get child gameobjects of the worker to change their colour
+        Material workerMat = ChooseColour();
+        newWorker.transform.Find("body").transform.Find("cap").gameObject.GetComponent<Renderer>().material = workerMat;
+
+        // add worker to managers list of workers
         activeWorkers.Add(newWorker);
 
         // add a worker card to the UI
         GameObject newWorkerCard = Instantiate(workerCardPrefab, workerCardUIContent.transform);
+        // change card colour to match the workers colour
+        newWorkerCard.GetComponent<Image>().color = workerMat.color;
+
         // pass the worker card start button reference to the newly created worker, btnStart
         GameObject workerStartButtonGO = newWorkerCard.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "btnStart")?.gameObject;
         Button workerStartButton = workerStartButtonGO.GetComponent<Button>();
@@ -89,12 +103,82 @@ public class WorkerManager : MonoBehaviour
         //UpdateStatusText();
     }
 
+    private Material ChooseColour()
+    {
+        // resources folder contains a number of materials with different colours
+        // choose one at random and pass it back
+        string materialName = "Worker_Red_Mat";
+        // pick random number
+        int randomNumber = UnityEngine.Random.Range(0, 12);
+        // switch on number to pick mat name
+        switch (randomNumber)
+        {
+            case 0:
+                materialName = "Worker_Red_Mat";
+                break;
+            case 1:
+                materialName = "Worker_Blue_Mat";
+                break;
+            case 2:
+                materialName = "Worker_Yellow_Mat";
+                break;
+            case 3:
+                materialName = "Worker_Green_Mat";
+                break;
+            case 4:
+                materialName = "Worker_Orange_Mat";
+                break;
+            case 5:
+                materialName = "Worker_Purple_Mat";
+                break;
+            case 6:
+                materialName = "Worker_Black_Mat";
+                break;
+            case 7:
+                materialName = "Worker_White_Mat";
+                break;
+            case 8:
+                materialName = "Worker_Gray_Mat";
+                break;
+            case 9:
+                materialName = "Worker_Brown_Mat";
+                break;
+            case 10:
+                materialName = "Worker_Pink_Mat";
+                break;
+            case 11:
+                materialName = "Worker_Cyan_Mat";
+                break;
+            default:
+                materialName = "Worker_Default_Mat";  // In case of an unexpected value
+                break;
+        }
+
+        // Load the material from Resources folder
+        Material newMat = Resources.Load<Material>(materialName);
+        if (newMat == null)
+        {
+            Debug.LogError("Failed to load material: " + materialName);
+            return null;
+        }
+
+        return newMat;
+    }
+
     // when the Start All button on UI is clicked, call each workers StartWorker method
     private void StartAllWorkers()
     {
         foreach (var worker in activeWorkers)
         {
             worker.GetComponent<WorkerThreadController>().StartWorker();
+        }
+    }
+    // called when the number of required numbers is reached
+    private void CancelAllWorkers()
+    {
+        foreach (var worker in activeWorkers)
+        {
+            worker.GetComponent<WorkerThreadController>().CancelWorker();
         }
     }
     // Update the status text with the current number of active workers

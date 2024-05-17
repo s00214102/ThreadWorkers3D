@@ -259,7 +259,7 @@ public class WorkerThreadController : MonoBehaviour
 		}
 	}
 
-	private void CancelWorker()
+	public void CancelWorker()
 	{
 		workerThread.Abort();
 	}
