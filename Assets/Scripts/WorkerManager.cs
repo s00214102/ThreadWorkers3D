@@ -18,7 +18,7 @@ public class WorkerManager : MonoBehaviour
     [SerializeField] private GameObject workerPrefab;
     [SerializeField] private GameObject workerCardPrefab;
     [SerializeField] private GameObject workerCardUIContent;
-    [SerializeField] private TextMeshProUGUI statusText;
+    [SerializeField] private TextMeshProUGUI txtActiveWorkers;
     //[SerializeField] private TextMeshProUGUI targetNumber;
 
     private Transform spawnPos;
@@ -42,6 +42,8 @@ public class WorkerManager : MonoBehaviour
 
         // listen to storage even for when the required numbers are reached
         GameObject.Find("storageBox").GetComponent<Storage>().OnNumberReached.AddListener(CancelAllWorkers);
+
+        UpdateStatusText();
     }
 
     void Update()
@@ -59,6 +61,9 @@ public class WorkerManager : MonoBehaviour
         // create/spawn new worker prefab, position at spawn point, add to list
         GameObject newWorker = Instantiate(workerPrefab, this.transform);
         newWorker.transform.position = spawnPos.position;
+
+        // set manager reference
+        newWorker.GetComponent<WorkerThreadController>().workerManager = this;
 
         // get child gameobjects of the worker to change their colour
         Material workerMat = ChooseColour();
@@ -101,6 +106,8 @@ public class WorkerManager : MonoBehaviour
         //     Debug.LogWarning("Worker thread not pooled correctly.");
 
         //UpdateStatusText();
+
+        UpdateStatusText();
     }
 
     private Material ChooseColour()
@@ -181,9 +188,16 @@ public class WorkerManager : MonoBehaviour
             worker.GetComponent<WorkerThreadController>().CancelWorker();
         }
     }
+
+    public void RemoveWorker(GameObject worker)
+    {
+        activeWorkers.Remove(worker);
+        UpdateStatusText();
+    }
+
     // Update the status text with the current number of active workers
     private void UpdateStatusText()
     {
-        statusText.text = $"Active Workers: {activeWorkers.Count}";
+        txtActiveWorkers.text = $"Workers: {activeWorkers.Count}";
     }
 }

@@ -36,6 +36,7 @@ public class WorkerThreadController : MonoBehaviour
 	private static readonly object storageLock = new object();
 
 	private CharacterMovement characterMovement;
+	[HideInInspector] public WorkerManager workerManager;
 
 	//private static JsonStorageManager isolatedStorage;
 
@@ -198,18 +199,6 @@ public class WorkerThreadController : MonoBehaviour
 		}
 	}
 
-	private void RetireWorker()
-	{
-		Debug.Log("Worker retiring.");
-		taskQueue.Enqueue(() => MoveWorker(retirement.position, 0));
-		reachedTargetEvent.WaitOne(); // Wait until destination is reached
-		reachedTargetEvent.Reset(); // Reset for the next event
-
-		Debug.Log("Worker has retired!");
-		//TODO worker retirement animation (blowsup? flies up into the air? enters a darkened doorway?)
-		taskQueue.Enqueue(() => DestroyWorker());
-	}
-
 	// Move the worker GameObject to the specified target position
 	private void MoveWorker(Vector3 targetPosition, float stopRange)
 	{
@@ -257,16 +246,6 @@ public class WorkerThreadController : MonoBehaviour
 				workerThread.Priority = System.Threading.ThreadPriority.Highest;
 				break;
 		}
-	}
-
-	public void CancelWorker()
-	{
-		workerThread.Abort();
-	}
-
-	private void DestroyWorker()
-	{
-		Destroy(this.gameObject);
 	}
 
 	int data = 0;
@@ -339,11 +318,31 @@ public class WorkerThreadController : MonoBehaviour
 		return "Unknown";
 	}
 
+	public void CancelWorker()
+	{
+		DestroyWorker();
+	}
+	private void RetireWorker()
+	{
+		Debug.Log("Worker retiring.");
+		taskQueue.Enqueue(() => MoveWorker(retirement.position, 0));
+		reachedTargetEvent.WaitOne(); // Wait until destination is reached
+		reachedTargetEvent.Reset(); // Reset for the next event
+
+		Debug.Log("Worker has retired!");
+		//TODO worker retirement animation (blowsup? flies up into the air? enters a darkened doorway?)
+		taskQueue.Enqueue(() => DestroyWorker());
+	}
+	private void DestroyWorker()
+	{
+		Destroy(this.gameObject);
+	}
 	void OnDestroy()
 	{
 		// Stop the worker thread when this MonoBehaviour is destroyed
+		workerThread.Abort();
 		workerDestroyed = true;
-		CancelWorker();
+		workerManager.RemoveWorker(gameObject);
 		Destroy(workerCard);
 	}
 

@@ -58,7 +58,7 @@ public class CharacterMovement : MonoBehaviour
         {
             if (HasReachedDestination())
             {
-                Debug.Log("Destination reached");
+                //Debug.Log("Destination reached");
                 OnDestinationReached();
                 StopMoving();
             }
