@@ -18,13 +18,15 @@ public class WorkerThreadController : MonoBehaviour
 	public Button startButton;
 	public Button cancelButton;
 	public GameObject workerCard;
+	public GameObject smokeEffect;
 
 	Transform computer; // the computers world position
 	Transform storage; // the storage world position
 	Transform retirement; // the storage world position
 
 	bool workerDestroyed = false;
-	private float rotationSpeed = 5;
+	bool workerInitialized = false;
+	private float rotationSpeed = 15;
 
 	private ConcurrentQueue<Action> taskQueue = new ConcurrentQueue<Action>();
 
@@ -36,7 +38,9 @@ public class WorkerThreadController : MonoBehaviour
 	private static readonly object storageLock = new object();
 
 	private CharacterMovement characterMovement;
+	private WorkerAnimationController animationController;
 	[HideInInspector] public WorkerManager workerManager;
+	[HideInInspector] public string workerName;
 
 	//private static JsonStorageManager isolatedStorage;
 
@@ -46,6 +50,7 @@ public class WorkerThreadController : MonoBehaviour
 		dataText.text = "";
 		// a component used to tell the robot where to move
 		characterMovement = GetComponent<CharacterMovement>();
+		animationController = GetComponent<WorkerAnimationController>();
 
 		// the worker should be able to find the storage and computer objects in the game world
 		storage = GameObject.Find("storagePos").transform;
@@ -60,18 +65,36 @@ public class WorkerThreadController : MonoBehaviour
 	// this method is used to start a components logic
 	private void Start()
 	{
+		// delay worker initialization to give the worker manager time to finish its setup
+		StartCoroutine(DelayedInitialization());
+	}
+	private IEnumerator DelayedInitialization()
+	{
+		yield return new WaitForSeconds(0.5f);
+
 		CreateWorkerThread();
 
 		stateText.text = GetReadableThreadState(workerThread.ThreadState);
 		startButton.onClick.AddListener(StartWorker);
 		cancelButton.onClick.AddListener(CancelWorker);
 		workerCard.GetComponent<WorkerCard>().OnPriorityValueChanged += UpdatePriority;
+		workerInitialized = true;
+	}
+	public void CreateWorkerThread()
+	{
+		if (workerThread == null || !workerThread.IsAlive)
+		{
+			workerThread = new Thread(() => RunWorker());
+			workerThread.Name = workerName;
+			workerThread.IsBackground = true; // Mark as background thread
+		}
 	}
 
 	// this method runs multiple times a frame according to unitys internal clock
 	private void Update()
 	{
-		stateText.text = GetReadableThreadState(workerThread.ThreadState);
+		if (workerInitialized)
+			stateText.text = GetReadableThreadState(workerThread.ThreadState);
 
 		// Execute all tasks queued by the worker threads on the main thread
 		while (taskQueue.TryDequeue(out Action action))
@@ -80,19 +103,10 @@ public class WorkerThreadController : MonoBehaviour
 		}
 	}
 
-	public void CreateWorkerThread()
-	{
-		if (workerThread == null || !workerThread.IsAlive)
-		{
-			workerThread = new Thread(() => RunWorker());
-			workerThread.IsBackground = true; // Mark as background thread
-		}
-	}
 
 	// called via UI button press
 	public void StartWorker()
 	{
-
 		if (workerThread.ThreadState.HasFlag(ThreadState.Unstarted))
 			workerThread.Start();
 	}
@@ -111,7 +125,7 @@ public class WorkerThreadController : MonoBehaviour
 		try
 		{
 			// move back and forth from computer to storage 5 times
-			for (int i = 0; i < 4; i++)
+			for (int i = 0; i < 2; i++)
 			{
 				if (workerDestroyed)
 				{
@@ -132,6 +146,13 @@ public class WorkerThreadController : MonoBehaviour
 						taskQueue.Enqueue(() => MoveWorker(computer.position, 0));
 						reachedTargetEvent.WaitOne(); // Wait until destination is reached
 						reachedTargetEvent.Reset(); // Reset for the next event	
+
+						taskQueue.Enqueue(() => StartCoroutine(RotateTowardsTarget(computer.position + new Vector3(0, 0, 1)))); // rotate to face computer
+						facingTargetEvent.WaitOne();
+						facingTargetEvent.Reset();
+
+						//taskQueue.Enqueue(() => animationController.animator.Play("WorkerWorking"));
+						taskQueue.Enqueue(() => animationController.SetWorking(true));
 						ComplexOutput(taskQueue);
 					}
 					catch (Exception e)
@@ -149,7 +170,11 @@ public class WorkerThreadController : MonoBehaviour
 				{
 					Debug.Log($"{workerThread.Name} can't access computer right now.");
 				}
-
+				if (workerDestroyed)
+				{
+					Debug.Log("Worker destroyed, exiting thread.");
+					return;
+				}
 				// enqueue the action to move to the storage area
 				taskQueue.Enqueue(() => MoveWorker(storage.position, 2));
 				reachedTargetEvent.WaitOne(); // Wait until destination is reached
@@ -191,7 +216,8 @@ public class WorkerThreadController : MonoBehaviour
 		}
 		catch (ThreadAbortException)
 		{
-			RetireWorker();
+			Debug.Log("Worker thread aborted");
+			//RetireWorker();
 		}
 		finally
 		{
@@ -209,22 +235,49 @@ public class WorkerThreadController : MonoBehaviour
 		characterMovement.DestinationReached.AddListener(() => reachedTargetEvent.Set());
 	}
 
-	// Rotate the worker to face a target and call ManualResetEvent facingTargetEvent.Set() 
 	private IEnumerator RotateTowardsTarget(Vector3 targetPosition)
 	{
+		// Calculate direction to the target, but ignore vertical displacement for rotation
 		Vector3 directionToTarget = targetPosition - transform.position;
+		directionToTarget.y = 0;  // Zero out the Y component
+
+		// Calculate the target rotation based on the direction vector
 		Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
 
-		while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f)
+		// Rotate towards the target rotation only on the Y axis
+		while (Quaternion.Angle(transform.rotation, targetRotation) > 0.5f)
 		{
-			// Rotate over time with specified speed
-			transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+			// Calculate the rotation for this frame
+			Quaternion currentRotation = transform.rotation;
+			Quaternion newRotation = Quaternion.Lerp(currentRotation, targetRotation, rotationSpeed * Time.deltaTime);
+
+			// Apply the rotation only on the Y axis
+			transform.rotation = Quaternion.Euler(0, newRotation.eulerAngles.y, 0);
+
 			yield return null;  // Wait until next frame to continue execution
 		}
 
-		transform.rotation = targetRotation;  // Ensure the rotation exactly faces the target
-		facingTargetEvent.Set();  // Signal that the target is now facing directly
+		// Snap to the exact target rotation, ensuring it is only applied to the Y axis
+		transform.rotation = Quaternion.Euler(0, targetRotation.eulerAngles.y, 0);
+		facingTargetEvent.Set();  // Signal that the target is now directly faced
 	}
+
+	// Rotate the worker to face a target and call ManualResetEvent facingTargetEvent.Set() 
+	// private IEnumerator RotateTowardsTarget(Vector3 targetPosition)
+	// {
+	// 	Vector3 directionToTarget = targetPosition - transform.position;
+	// 	Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+
+	// 	while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f)
+	// 	{
+	// 		// Rotate over time with specified speed
+	// 		transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+	// 		yield return null;  // Wait until next frame to continue execution
+	// 	}
+
+	// 	transform.rotation = targetRotation;  // Ensure the rotation exactly faces the target
+	// 	facingTargetEvent.Set();  // Signal that the target is now facing directly
+	// }
 
 	public void UpdatePriority(int value)
 	{
@@ -291,6 +344,7 @@ public class WorkerThreadController : MonoBehaviour
 		System.Random finalRandom = new System.Random();
 		data = finalRandom.Next(0, 9);
 		taskQueue.Enqueue(() => dataText.text = data.ToString());
+		taskQueue.Enqueue(() => animationController.SetWorking(false));
 	}
 
 	// Decode the ThreadState into a more human-readable message
@@ -318,10 +372,17 @@ public class WorkerThreadController : MonoBehaviour
 		return "Unknown";
 	}
 
+	// called by UI cancel buttons, terminates worker immediately
 	public void CancelWorker()
 	{
-		DestroyWorker();
+		// only cancel if the worker has been started
+		if (workerThread.ThreadState.HasFlag(ThreadState.Running))
+		{
+			Instantiate(smokeEffect, transform.position, Quaternion.identity);
+			taskQueue.Enqueue(() => TerminateWorker());
+		}
 	}
+	// worker moves to retirement home, then terminates
 	private void RetireWorker()
 	{
 		Debug.Log("Worker retiring.");
@@ -331,19 +392,53 @@ public class WorkerThreadController : MonoBehaviour
 
 		Debug.Log("Worker has retired!");
 		//TODO worker retirement animation (blowsup? flies up into the air? enters a darkened doorway?)
-		taskQueue.Enqueue(() => DestroyWorker());
+		taskQueue.Enqueue(() => TerminateWorker());
 	}
-	private void DestroyWorker()
+
+	private void TerminateWorker()
 	{
+		workerManager.RemoveWorker(gameObject);
+
+		if (workerCard != null)
+			Destroy(workerCard);
+
+		StopWorkerThread();
+		DisableWorker();
+	}
+	// handle thread termination
+	private void StopWorkerThread()
+	{
+		workerDestroyed = true;
+		if (workerThread != null && workerThread.IsAlive)
+		{
+			workerThread.Abort(); // Use Abort as a last resort if the thread does not stop
+		}
+	}
+	// first disable the gameobject, then after some time destroy the gameobject
+	public void DisableWorker()
+	{
+		gameObject.SetActive(false);
+		//StartCoroutine(DelayedDestroy());
+	}
+	private IEnumerator DelayedDestroy()
+	{
+		yield return new WaitForSeconds(3f);
 		Destroy(this.gameObject);
+	}
+	void OnDisable()
+	{
+		Debug.Log("Worker disabled");
+		// workerDestroyed = true;
+		// // Give it a little time to finish
+		// if (!workerThread.Join(1000)) // Wait 1 second for the thread to stop
+		// {
+		// 	workerThread.Abort(); // Use Abort as a last resort if the thread does not stop
+		// }
 	}
 	void OnDestroy()
 	{
-		// Stop the worker thread when this MonoBehaviour is destroyed
-		workerThread.Abort();
-		workerDestroyed = true;
-		workerManager.RemoveWorker(gameObject);
-		Destroy(workerCard);
+		Debug.Log("Worker destroyed");
+
 	}
 
 }

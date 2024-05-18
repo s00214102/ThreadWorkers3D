@@ -30,6 +30,8 @@ public class Storage : MonoBehaviour
 		isoStorage = GetComponent<UnityIsolatedStorage>();
 
 		totalNumbers = 0;
+		healthBar.SetMaxHealth(100);
+		healthBar.SetHealth(0);
 	}
 
 	private void Start()

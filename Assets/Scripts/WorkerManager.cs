@@ -67,7 +67,7 @@ public class WorkerManager : MonoBehaviour
 
         // get child gameobjects of the worker to change their colour
         Material workerMat = ChooseColour();
-        newWorker.transform.Find("body").transform.Find("cap").gameObject.GetComponent<Renderer>().material = workerMat;
+        newWorker.transform.Find("mesh").transform.Find("body").transform.Find("cap").gameObject.GetComponent<Renderer>().material = workerMat;
 
         // add worker to managers list of workers
         activeWorkers.Add(newWorker);
@@ -91,7 +91,9 @@ public class WorkerManager : MonoBehaviour
         newWorker.GetComponent<WorkerThreadController>().workerCard = newWorkerCard;
         // name the worker
         GameObject workerCardName = newWorkerCard.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "txtName")?.gameObject;
-        workerCardName.GetComponent<TextMeshProUGUI>().text = $"Worker {totalWorkersCreated:D3}";
+        string workerName = $"Worker {totalWorkersCreated:D3}";
+        workerCardName.GetComponent<TextMeshProUGUI>().text = workerName;
+        newWorker.GetComponent<WorkerThreadController>().workerName = workerName;
         totalWorkersCreated++;
         // txtState
         GameObject workerStateTextGO = newWorkerCard.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "txtState")?.gameObject;
