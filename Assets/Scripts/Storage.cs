@@ -24,7 +24,7 @@ public class Storage : MonoBehaviour
 		else
 		{
 			Instance = this;
-			DontDestroyOnLoad(this.gameObject); // Optional: Keep instance alive across scenes
+			//DontDestroyOnLoad(this.gameObject); // Optional: Keep instance alive across scenes
 		}
 
 		isoStorage = GetComponent<UnityIsolatedStorage>();
@@ -37,9 +37,12 @@ public class Storage : MonoBehaviour
 	private void Start()
 	{
 		isoStorage.ReadDataFromIsolatedStorage();
+
+		totalNumbers = 0;
 		healthBar.SetMaxHealth(100);
 		healthBar.SetHealth(0);
 	}
+
 	// called from a worker 
 	public void AddNumberToStorageAndDisplay(string s)
 	{
