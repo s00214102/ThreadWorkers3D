@@ -11,8 +11,12 @@ using UnityEngine.UI;
 
 public class WorkerThreadController : MonoBehaviour
 {
-	Thread workerThread;
+	// Components
+	private CharacterMovement characterMovement;
+	private WorkerAnimationController animationController;
+	[HideInInspector] public WorkerManager workerManager;
 
+	// UI 
 	[SerializeField] private TMP_Text dataText;
 	public TMP_Text stateText;
 	public Button startButton;
@@ -20,29 +24,25 @@ public class WorkerThreadController : MonoBehaviour
 	public GameObject workerCard;
 	public GameObject smokeEffect;
 
+	// world positions
 	Transform computer; // the computers world position
 	Transform storage; // the storage world position
 	Transform retirement; // the storage world position
 
+	// logic
 	bool workerDestroyed = false;
 	bool workerInitialized = false;
 	private float rotationSpeed = 15;
 
+	// threading
+	Thread workerThread;
+	[HideInInspector] public string workerName;
 	private ConcurrentQueue<Action> taskQueue = new ConcurrentQueue<Action>();
-
 	// used to let the thread know when we have reached a target destination
 	private ManualResetEvent reachedTargetEvent = new ManualResetEvent(false);
 	private ManualResetEvent facingTargetEvent = new ManualResetEvent(false);
-
 	private static readonly object calculationLock = new object();
 	private static readonly object storageLock = new object();
-
-	private CharacterMovement characterMovement;
-	private WorkerAnimationController animationController;
-	[HideInInspector] public WorkerManager workerManager;
-	[HideInInspector] public string workerName;
-
-	//private static JsonStorageManager isolatedStorage;
 
 	// this method is run before Start() and is used for setup
 	private void Awake()
@@ -62,6 +62,7 @@ public class WorkerThreadController : MonoBehaviour
 			Destroy(gameObject);
 		}
 	}
+
 	// this method is used to start a components logic
 	private void Start()
 	{
@@ -102,7 +103,6 @@ public class WorkerThreadController : MonoBehaviour
 			action.Invoke();
 		}
 	}
-
 
 	// called via UI button press
 	public void StartWorker()
@@ -162,7 +162,6 @@ public class WorkerThreadController : MonoBehaviour
 					finally
 					{
 						Monitor.Pulse(calculationLock);
-						//TODO play a pulse animation from the anthenna of the worker
 						Monitor.Exit(calculationLock);
 					}
 				}
@@ -199,7 +198,6 @@ public class WorkerThreadController : MonoBehaviour
 					finally
 					{
 						Monitor.Pulse(storageLock);
-						//TODO play a pulse animation from the anthenna of the worker
 						Monitor.Exit(storageLock);
 					}
 				}
@@ -217,7 +215,6 @@ public class WorkerThreadController : MonoBehaviour
 		catch (ThreadAbortException)
 		{
 			Debug.Log("Worker thread aborted");
-			//RetireWorker();
 		}
 		finally
 		{
@@ -262,23 +259,6 @@ public class WorkerThreadController : MonoBehaviour
 		facingTargetEvent.Set();  // Signal that the target is now directly faced
 	}
 
-	// Rotate the worker to face a target and call ManualResetEvent facingTargetEvent.Set() 
-	// private IEnumerator RotateTowardsTarget(Vector3 targetPosition)
-	// {
-	// 	Vector3 directionToTarget = targetPosition - transform.position;
-	// 	Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-
-	// 	while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f)
-	// 	{
-	// 		// Rotate over time with specified speed
-	// 		transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-	// 		yield return null;  // Wait until next frame to continue execution
-	// 	}
-
-	// 	transform.rotation = targetRotation;  // Ensure the rotation exactly faces the target
-	// 	facingTargetEvent.Set();  // Signal that the target is now facing directly
-	// }
-
 	public void UpdatePriority(int value)
 	{
 		switch (value)
@@ -301,7 +281,7 @@ public class WorkerThreadController : MonoBehaviour
 		}
 	}
 
-	int data = 0;
+	int data = 0; // the number which the worker carries from the computer to storage
 	private void ComplexOutput(ConcurrentQueue<Action> taskQueue)
 	{
 		// Simulate a delay using inefficient computations
@@ -391,7 +371,6 @@ public class WorkerThreadController : MonoBehaviour
 		reachedTargetEvent.Reset(); // Reset for the next event
 
 		Debug.Log("Worker has retired!");
-		//TODO worker retirement animation (blowsup? flies up into the air? enters a darkened doorway?)
 		taskQueue.Enqueue(() => TerminateWorker());
 	}
 
@@ -418,27 +397,14 @@ public class WorkerThreadController : MonoBehaviour
 	public void DisableWorker()
 	{
 		gameObject.SetActive(false);
-		//StartCoroutine(DelayedDestroy());
-	}
-	private IEnumerator DelayedDestroy()
-	{
-		yield return new WaitForSeconds(3f);
-		Destroy(this.gameObject);
 	}
 	void OnDisable()
 	{
-		Debug.Log("Worker disabled");
-		// workerDestroyed = true;
-		// // Give it a little time to finish
-		// if (!workerThread.Join(1000)) // Wait 1 second for the thread to stop
-		// {
-		// 	workerThread.Abort(); // Use Abort as a last resort if the thread does not stop
-		// }
+		//Debug.Log("Worker disabled");
 	}
 	void OnDestroy()
 	{
-		Debug.Log("Worker destroyed");
-
+		//Debug.Log("Worker destroyed");
+		StopWorkerThread();
 	}
-
 }

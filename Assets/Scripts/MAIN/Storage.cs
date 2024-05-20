@@ -24,7 +24,6 @@ public class Storage : MonoBehaviour
 		else
 		{
 			Instance = this;
-			//DontDestroyOnLoad(this.gameObject); // Optional: Keep instance alive across scenes
 		}
 
 		isoStorage = GetComponent<UnityIsolatedStorage>();
